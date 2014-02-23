@@ -1,0 +1,13 @@
+[user]
+	email = dmlipinski@gmail.com
+	name = Doug Lipinski
+[push]
+	default = simple
+[color]
+	ui = true
+[diff]
+	tool = opendiff
+[merge]
+	tool = opendiff
+[core]
+	excludesfile = ~/.gitignore
