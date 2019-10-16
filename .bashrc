@@ -3,11 +3,14 @@
 # for examples
 
 # If not running interactively, don't do anything
-[ -z "$PS1" ] && return
+case $- in
+    *i*) ;;
+      *) return;;
+esac
 
-# don't put duplicate lines in the history. See bash(1) for more options
-# ... or force ignoredups and ignorespace
-HISTCONTROL=ignoredups:ignorespace
+# don't put duplicate lines or lines starting with space in the history.
+# See bash(1) for more options
+HISTCONTROL=ignoreboth
 
 # append to the history file, don't overwrite it
 shopt -s histappend
@@ -20,23 +23,27 @@ HISTFILESIZE=2000
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
 
+# If set, the pattern "**" used in a pathname expansion context will
+# match all files and zero or more directories and subdirectories.
+#shopt -s globstar
+
 # make less more friendly for non-text input files, see lesspipe(1)
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
 # set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
 
 # set a fancy prompt (non-color, unless we know we "want" color)
 case "$TERM" in
-    xterm-color) color_prompt=yes;;
+    xterm-color|*-256color) color_prompt=yes;;
 esac
 
 # uncomment for a colored prompt, if the terminal has the capability; turned
 # off by default to not distract the user: the focus in a terminal window
 # should be on the output of commands, not on the prompt
-force_color_prompt=yes
+#force_color_prompt=yes
 
 if [ -n "$force_color_prompt" ]; then
     if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
@@ -64,6 +71,7 @@ xterm*|rxvt*)
 *)
     ;;
 esac
+export PROMPT_DIRTRIM=2
 
 # enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then
@@ -77,10 +85,8 @@ if [ -x /usr/bin/dircolors ]; then
     alias egrep='egrep --color=auto'
 fi
 
-# some more ls aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
+# colored GCC warnings and errors
+#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
@@ -98,6 +104,94 @@ fi
 # enable programmable completion features (you don't need to enable
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
 # sources /etc/bash.bashrc).
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
     . /etc/bash_completion
+  fi
 fi
+
+# function to enable viewing markdown files by converting to pdf and opening in evince
+md() { TMPFILE="$(mktemp).pdf" && pandoc "$1" -o $TMPFILE && evince $TMPFILE && rm $TMPFILE & }
+
+if [ -d $HOME/local/bin ]; then
+  export PATH="$HOME/local/bin:$PATH"
+fi
+
+# Fancy prompt stuff to display git information:
+function parse_git_branch {
+   git branch --no-color 2>/dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1)/'
+}
+
+function awesomeprompt2 {
+
+   EXITSTATUS="$?"
+   BOLD="\[\033[1m\]"
+   RED="\[\033[1;31m\]"
+   GREEN="\[\e[0;32m\]"
+   BOLD_GREEN="\[\e[32;1m\]"
+   YELLOW="\[\e[0;33m\]"
+   BOLD_BLUE="\[\e[34;1m\]"
+   OFF="\[\033[m\]"
+
+   GIT_BRANCH=$(parse_git_branch)
+
+   if [ "${GIT_BRANCH}" != "" ];
+   then
+      GIT_BRANCH=" ${GREEN}${GIT_BRANCH}${OFF}"
+   fi
+
+   ENVIRO="${GREEN}${BUILD_ENV}${OFF}"
+
+   MY_USER="${BOLD}${GREEN}\u${OFF}"
+   MY_HOST="${YELLOW}\h${OFF}"
+
+   if [ $(whoami) == "root" ];
+   then
+     PROMT_CHAR="#"
+   else
+     PROMT_CHAR="\$"
+   fi
+
+   if [ "${EXITSTATUS}" -eq 0 ];
+   then
+      STATUS="${BOLD}${BOLD_GREEN}:)${OFF}"
+      PROMPT="${ENVIRO}${PROMT_CHAR}"
+   else
+      STATUS="${BOLD}${RED}:(${OFF}"
+      # set a red prompt when the command failed.
+      PROMPT="${ENVIRO}${BOLD}${RED}${PROMT_CHAR}${OFF}"
+   fi
+
+   WD="${BOLD_BLUE}\w${OFF}"
+
+   # do some fancy stuff to determine how wide to make the red line
+   REDLINE="\e]2;\$(pwd)\a\e]1;\$(pwd)\a\e[31;1m\$(s=\$(printf "%*s" \$COLUMNS); echo \${s// /-})\n\e[0m"
+
+   NEWENV="${GREEN}${ENV}${OFF}"
+   if [ "${ENV}" != "" ];
+   then
+     #PS1="${REDLINE}[${MY_HOST} ${WD} ${STATUS}${GIT_BRANCH} ${NEWENV} ]\n${PROMPT} "
+     PS1="[${MY_HOST} ${WD} ${STATUS}${GIT_BRANCH} ${NEWENV} ]\n${PROMPT} "
+   else
+     #PS1="${REDLINE}[${MY_HOST} ${WD} ${STATUS}${GIT_BRANCH} ]\n${PROMPT} "
+     PS1="[${MY_HOST} ${WD} ${STATUS}${GIT_BRANCH} ]\n${PROMPT} "
+   fi
+
+   PS2="${BOLD}>${OFF} "
+}
+
+export PROMPT_COMMAND=awesomeprompt2
+
+rti531() {
+  source /opt/rti_connext_dds-5.3.1/resource/scripts/rtisetenv_x64Linux3gcc5.4.0.bash
+}
+#############################################
+
+# exports:
+export PATH="$PATH:/opt/cuda/bin"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/cuda/lib64"
+export FG_AIRCRAFT="$HOME/flightgear/Aircraft"
+export EDITOR="nvim"
+export JAVA_HOME="/usr"

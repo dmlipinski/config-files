@@ -1,13 +1,22 @@
-[user]
-	email = dmlipinski@gmail.com
-	name = Doug Lipinski
-[push]
-	default = simple
 [color]
 	ui = true
+
 [diff]
-	tool = opendiff
+	tool = meld
+
 [merge]
-	tool = opendiff
-[core]
-	excludesfile = ~/.gitignore
+	tool = meld
+
+[alias]
+	co = checkout
+	br = branch
+	st = status
+	ci = commit
+	diff = diff --word-diff
+	up = !git pull --rebase --prune $@ && git submodule update --init --recursive
+	wipe = !git add -A && git commit -qm 'WIPE SAVEPOINT' && git reset HEAD~1 --hard
+	ls = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue) %Creset' --abbrev-commit --decorate
+	ll = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue) %Creset' --abbrev-commit --decorate --numstat
+[user]
+	name = Doug Lipinski
+	email = lipinski.douglas@aurora.aero
